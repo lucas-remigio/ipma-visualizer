@@ -38,10 +38,22 @@ interface ipmaWeatherTypes {
   idWeatherType: 0
 }
 
+export interface ipmaWarnings {
+  text: string
+  awarenessTypeName: string
+  idAreaAviso: string
+  startTime: string
+  awarenessLevelID: string
+  endTime: string
+}
+
 export default function Home() {
   let [ipmaCities, setIpmaCities] = useState<ipmaCities[]>([])
   let [ipmaPrevision, setIpmaPrevision] = useState<ipmaPrevision[]>([])
   let [ipmaWeatherTypesMap, setIpmaWeatherTypesMap] = useState<Map<number, string>>(new Map())
+  let [ipmaCitiesMap, setIpmaCitiesMap] = useState<Map<number, string>>(new Map())
+  let [ipmaWarnings, setIpmaWarnings] = useState<ipmaWarnings[]>([])
+  let [ipmaWarningsByCity, setIpmaWarningsByCity] = useState<ipmaWarnings[]>([])
   let [error, setError] = useState<string>('')
   let windTypesMap = new Map<number, string>([
     [1, 'Fraco'],
@@ -54,7 +66,6 @@ export default function Home() {
     e.preventDefault()
 
     let selectedCityId = parseInt(e.target.value)
-
     if (!selectedCityId) {
       setError('Please select a city')
       return
@@ -107,8 +118,37 @@ export default function Home() {
         return prevision
       })
 
-      console.log(ipmaData)
+      let selectedCityAreaAviso = ipmaCitiesMap.get(selectedCityId)
+
+      // filtrar avisos metereologicos por cidade
+      let selectedCityWarnings = ipmaWarnings.filter(
+        (warning: ipmaWarnings) =>
+          warning.idAreaAviso == selectedCityAreaAviso && warning.awarenessLevelID != 'green'
+      )
+
+      selectedCityWarnings = selectedCityWarnings.map((warning) => {
+        // Create a copy of the warning object to avoid mutating the original
+        let warningCopy = { ...warning }
+
+        const dateStartTime = new Date(warning.startTime)
+        const dateEndTime = new Date(warning.endTime)
+        const options = {
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }
+        warningCopy.startTime = dateStartTime.toLocaleString('pt-PT', options)
+        warningCopy.endTime = dateEndTime.toLocaleString('pt-PT', options)
+
+        return warningCopy
+      })
+
+      setIpmaWarningsByCity(selectedCityWarnings)
       setIpmaPrevision(ipmaData)
+
+      console.log(selectedCityWarnings)
+      console.log(ipmaData)
     } catch (error) {
       console.error('Error fetching weather data:', error)
       setError('Error fetching weather data')
@@ -119,22 +159,30 @@ export default function Home() {
   useEffect(() => {
     async function fetchData() {
       try {
-        let responseCities = await axios.get('https://api.ipma.pt/open-data/distrits-islands.json')
-        setIpmaCities(responseCities.data.data)
+        let [responseCities, responseWeatherTypes, responseWarnings] = await Promise.all([
+          axios.get('https://api.ipma.pt/open-data/distrits-islands.json'),
+          axios.get('https://api.ipma.pt/open-data/weather-type-classe.json'),
+          axios.get('https://api.ipma.pt/open-data/forecast/warnings/warnings_www.json'),
+        ])
 
-        let responseWeatherTypes = await axios.get(
-          'https://api.ipma.pt/open-data/weather-type-classe.json'
-        )
-        let weatherTypes = responseWeatherTypes.data.data
+        let ipmaCitiesData = responseCities.data.data
+        let weatherTypesData = responseWeatherTypes.data.data
+        let warningsData = responseWarnings.data
+
+        setIpmaCities(ipmaCitiesData)
+        setIpmaWarnings(warningsData)
 
         let weatherTypesMap = new Map<number, string>()
-        weatherTypes.forEach((weatherType: ipmaWeatherTypes) =>
+        weatherTypesData.forEach((weatherType: ipmaWeatherTypes) =>
           weatherTypesMap.set(weatherType.idWeatherType, weatherType.descWeatherTypePT)
         )
-
-        console.log(weatherTypesMap) // Check if map is populated correctly
-
         setIpmaWeatherTypesMap(weatherTypesMap)
+
+        let citiesMap = new Map<number, string>()
+        ipmaCitiesData.forEach((city: ipmaCities) => {
+          citiesMap.set(city.globalIdLocal, city.idAreaAviso)
+        })
+        setIpmaCitiesMap(citiesMap)
       } catch (error) {
         console.error('Error fetching data:', error)
         setError('Error fetching data')
@@ -188,12 +236,35 @@ export default function Home() {
         </select>
       </form>
       {error && <p className="text-red-500">{error}</p>}
+      <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 my-4 align-center">
+        {ipmaWarningsByCity.map((warning, idx) => (
+          <li
+            key={idx}
+            className="relative p-4 bg-white rounded-lg shadow-md border-l-4 border-${warning.awarenessLevelID}-500"
+          >
+            <div className="flex items-center">
+              <div className={`text-${warning.awarenessLevelID}-500`}>
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12zm-1-10h2v5h-2V6zm0 6h2v2h-2v-2z" />
+                </svg>
+              </div>
+              <h3 className="ml-2 text-lg font-semibold">{warning.awarenessTypeName}</h3>
+            </div>
+            <p>
+              {warning.startTime} até&nbsp;
+              {warning.endTime}
+            </p>
+            <p className="mt-2 text-gray-600">{warning.text}</p>
+          </li>
+        ))}
+      </ul>
+
       <div className="flex flex-wrap m-10 justify-center ">
         {ipmaPrevision &&
           ipmaPrevision.map((prevision) => (
             <div
               key={prevision.forecastDate}
-              className="p-5 m-3 bg-white rounded-lg shadow-lg w-full sm:w-1/2 lg:w-1/4 text-center"
+              className="p-5 m-3 bg-white rounded-lg shadow-lg w-full sm:w-1/4 lg:w-1/4 text-center"
             >
               <p className="text-lg font-semibold">{prevision.dayOfWeek}</p>
               <p className="text-sm font-semibold">{prevision.weatherName}</p>
