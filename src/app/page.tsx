@@ -29,6 +29,7 @@ interface ipmaPrevision {
   svgPath: string
   dayOfWeek?: string
   weatherName?: string
+  windName: string
 }
 
 interface ipmaWeatherTypes {
@@ -42,6 +43,12 @@ export default function Home() {
   let [ipmaPrevision, setIpmaPrevision] = useState<ipmaPrevision[]>([])
   let [ipmaWeatherTypesMap, setIpmaWeatherTypesMap] = useState<Map<number, string>>(new Map())
   let [error, setError] = useState<string>('')
+  let windTypesMap = new Map<number, string>([
+    [1, 'Fraco'],
+    [2, 'Moderado'],
+    [3, 'Forte'],
+    [3, 'Muito forte'],
+  ])
 
   async function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
     e.preventDefault()
@@ -94,6 +101,9 @@ export default function Home() {
         }
         prevision.svgPath = `/icons_ipma_weather/w_ic_d_${prevision.idWeatherType}anim.svg`
 
+        // inves de wind id, ter o nome do vento
+        prevision.windName = windTypesMap.get(prevision.classWindSpeed) as string
+
         return prevision
       })
 
@@ -134,8 +144,34 @@ export default function Home() {
     fetchData()
   }, [])
 
+  function getPrecipitationColor(precipitaProb: number): string {
+    const prob = precipitaProb // Convert to float if needed
+    if (prob < 30) {
+      return 'text-gray-500'
+    } else if (prob < 70) {
+      return 'text-yellow-500'
+    } else {
+      return 'text-blue-500'
+    }
+  }
+
+  function getWindColor(classWindSpeed: number): string {
+    switch (classWindSpeed) {
+      case 1:
+        return 'text-gray-500'
+      case 2:
+        return 'text-yellow-500'
+      case 3:
+        return 'text-red-500'
+      case 4:
+        return 'text-purple-500'
+      default:
+        return 'text-gray-500'
+    }
+  }
+
   return (
-    <main className="flex min-h-screen flex-col items-center py-32 px-8">
+    <main className="flex min-h-screen flex-col items-center py-8 px-8">
       <form>
         <select
           onChange={handleChange}
@@ -152,7 +188,7 @@ export default function Home() {
         </select>
       </form>
       {error && <p className="text-red-500">{error}</p>}
-      <div className="flex flex-wrap m-10 justify-center">
+      <div className="flex flex-wrap m-10 justify-center ">
         {ipmaPrevision &&
           ipmaPrevision.map((prevision) => (
             <div
@@ -172,8 +208,34 @@ export default function Home() {
                   />
                 </div>
                 <div className="flex-1 w-16">
-                  <p className="text-gray-700">Max: {prevision.tMin}</p>
-                  <p className="text-gray-700">Min: {prevision.tMax}</p>
+                  <p className="text-gray-700">Max: {prevision.tMax}ºC</p>
+                  <p className="text-gray-700">Min: {prevision.tMin}ºC</p>
+                  <div className="flex justify-center">
+                    <Image
+                      src="/icons_ipma_weather/water-drop.svg"
+                      alt={`Water drop icon`}
+                      width={15}
+                      height={15}
+                    />
+                    <p
+                      className={`text-gray-700 ml-1 ${getPrecipitationColor(
+                        parseInt(prevision.precipitaProb)
+                      )}`}
+                    >
+                      {prevision.precipitaProb}%
+                    </p>
+                  </div>
+                  <div className="flex justify-center">
+                    <Image
+                      src="/icons_ipma_weather/wind.svg"
+                      alt={`Wind icon`}
+                      width={15}
+                      height={15}
+                    />
+                    <p className={`text-gray-700 ml-1 ${getWindColor(prevision.classWindSpeed)}`}>
+                      {prevision.windName} ({prevision.predWindDir})
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
