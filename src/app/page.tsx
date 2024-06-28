@@ -132,14 +132,8 @@ export default function Home() {
 
         const dateStartTime = new Date(warning.startTime)
         const dateEndTime = new Date(warning.endTime)
-        const options = {
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        }
-        warningCopy.startTime = dateStartTime.toLocaleString('pt-PT', options)
-        warningCopy.endTime = dateEndTime.toLocaleString('pt-PT', options)
+        warningCopy.startTime = dateStartTime.toLocaleString('pt-PT')
+        warningCopy.endTime = dateEndTime.toLocaleString('pt-PT')
 
         return warningCopy
       })
@@ -240,7 +234,7 @@ export default function Home() {
         {ipmaWarningsByCity.map((warning, idx) => (
           <li
             key={idx}
-            className="relative p-4 bg-white rounded-lg shadow-md border-l-4 border-${warning.awarenessLevelID}-500"
+            className={`relative p-4 bg-white rounded-lg shadow-md border-l-2 border-${warning.awarenessLevelID}-500`}
           >
             <div className="flex items-center">
               <div className={`text-${warning.awarenessLevelID}-500`}>
@@ -248,18 +242,18 @@ export default function Home() {
                   <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12zm-1-10h2v5h-2V6zm0 6h2v2h-2v-2z" />
                 </svg>
               </div>
-              <h3 className="ml-2 text-lg font-semibold">{warning.awarenessTypeName}</h3>
+              <h3 className={`ml-2 text-lg font-semibold text-${warning.awarenessLevelID}-500`}>{warning.awarenessTypeName}</h3>
             </div>
-            <p>
-              {warning.startTime} até&nbsp;
+            <p className="mt-2 text-gray-500">
+              de {warning.startTime} até&nbsp;
               {warning.endTime}
             </p>
-            <p className="mt-2 text-gray-600">{warning.text}</p>
+            <p className="mt-2 text-gray-800">{warning.text}</p>
           </li>
         ))}
       </ul>
 
-      <div className="flex flex-wrap m-10 justify-center ">
+      <div className="flex flex-wrap justify-center ">
         {ipmaPrevision &&
           ipmaPrevision.map((prevision) => (
             <div
@@ -289,7 +283,7 @@ export default function Home() {
                       height={15}
                     />
                     <p
-                      className={`text-gray-700 ml-1 ${getPrecipitationColor(
+                      className={`ml-1 ${getPrecipitationColor(
                         parseInt(prevision.precipitaProb)
                       )}`}
                     >
